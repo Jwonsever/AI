@@ -65,10 +65,11 @@ class QLearningAgent(ReinforcementAgent):
         """
         "*** YOUR CODE HERE ***"
         q = -float("inf")
-        for action in self.getLegalActions(state):
+        legalActions = self.getLegalActions(state)
+        for action in legalActions:
             q = max(q, self.getQValue(state, action))
 
-        if len(self.getLegalActions(state)) == 0:
+        if len(legalActions) == 0:
             return 0
 
         return q
@@ -84,7 +85,7 @@ class QLearningAgent(ReinforcementAgent):
         bestQ = -float("inf")
         for action in self.getLegalActions(state):
             q = self.getQValue(state, action)
-            if (bestQ > q):
+            if (bestQ < q):
                 bestQ = q
                 bestAction = action
         return bestAction
@@ -103,9 +104,8 @@ class QLearningAgent(ReinforcementAgent):
         # Pick Action
         legalActions = self.getLegalActions(state)
         action = self.computeActionFromQValues(state)
-        if not util.flipCoin(self.epsilon):
-            legalActions.remove(action)
-            action = random.choice(legalActions)
+        if util.flipCoin(self.epsilon):
+            return random.choice(legalActions)
         return action
 
     def update(self, state, action, nextState, reward):
