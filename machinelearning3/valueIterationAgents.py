@@ -43,17 +43,18 @@ class ValueIterationAgent(ValueEstimationAgent):
         self.discount = discount
         self.iterations = iterations
         self.values = util.Counter() # A Counter is a dict with default 0
-
+        
+        self.newvalues = util.Counter()
         # Write value iteration code here
         "*** YOUR CODE HERE ***"
-        for state in mdp.getStates():
-            self.values[state] = 0
 
         iterationsRun = 0
         while iterationsRun < iterations:
             iterationsRun += 1
-
-            //PUT EVERYTING HERE
+            for state in mdp.getStates():
+                self.computeActionFromValues(state)
+            for state in mdp.getStates():
+                self.values[state] = self.newvalues[state]
 
     def getValue(self, state):
         """
@@ -73,7 +74,10 @@ class ValueIterationAgent(ValueEstimationAgent):
             nextState = futureStateTuple[0]
             nextStateProbability = futureStateTuple[1]
             reward = self.mdp.getReward(state, action, nextState)
-            q = q + nextStateProbability*(reward + self.discount * self.values[state])
+            if self.mdp.isTerminal(nextState):
+                q = q + nextStateProbability*reward
+            else:
+                q = q + nextStateProbability*(reward + self.discount * self.values[nextState])
         return q
 
     def computeActionFromValues(self, state):
@@ -95,7 +99,7 @@ class ValueIterationAgent(ValueEstimationAgent):
                 bestAction = action
                 bestValue = thisValue
 
-        self.values[state] = bestValue
+        self.newvalues[state] = bestValue
         return bestAction
 
     def getPolicy(self, state):
