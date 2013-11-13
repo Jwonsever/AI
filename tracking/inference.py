@@ -441,6 +441,7 @@ class JointParticleFilter:
         self.legalPositions = legalPositions
         self.initializeParticles()
 
+
     def initializeParticles(self):
         """
         Initialize particles to be consistent with a uniform prior.
@@ -473,12 +474,20 @@ class JointParticleFilter:
         ghostArrangements = []
         for i in itertools.product(positions,repeat=self.numGhosts):
             ghostArrangements.append(i)
-        weight=1
+
         
+        weight=1        
         for i in range(0,self.numParticles):
             j = i%len(ghostArrangements)
             self.particles.append([ghostArrangements[j], weight])
         
+        '''   
+        for i in range(self.numGhosts):
+            #Send this one to jail if I need to
+            if (self.jailedGhost[i] != 0):
+                for p in self.particles:
+                    p[0] = self.getParticleWithGhostInJail(p[0],i)
+        '''
 
     def addGhostAgent(self, agent):
         "Each ghost agent is registered separately and stored (in case they are different)."
@@ -526,21 +535,25 @@ class JointParticleFilter:
 
         "*** YOUR CODE HERE ***"
         
+        
         #loop ghosts, updating weights
         for i in range(self.numGhosts):
             #Send this one to jail if I need to
             if (noisyDistances[i] == None):
                 for p in self.particles:
                     p[0] = self.getParticleWithGhostInJail(p[0],i)
-            
+                    p[1] = 1
+                    '''self.jailedGhost[i] = 1'''
+                continue
+
             for p in self.particles:
                 ghostPositions = p[0]
                 currentGhostDist = ghostPositions[i]
                 trueDistance = util.manhattanDistance(currentGhostDist, pacmanPosition)
                 '''Update Weight of This Particle, for this ghost'''
                 p[1] = p[1] * emissionModels[i][trueDistance]
-        
-        
+            
+                
         
         """Check Null Weights, after ALL updates"""
         sumWeights=0;
@@ -548,18 +561,28 @@ class JointParticleFilter:
             sumWeights+=p[1]
         if sumWeights == 0:
             self.initializeParticles()
+            
+            #Send to jail
+            for i in range(self.numGhosts):
+            #Send this one to jail if I need to
+                if (noisyDistances[i] == None):
+                    for p in self.particles:
+                        p[0] = self.getParticleWithGhostInJail(p[0],i)
             return
+        
 
         """Define aggregate weights of (Ghost super-particle Locations)"""
         aggregateWeights = util.Counter()
         for p in self.particles:
+            #print p[0]
             aggregateWeights[p[0]] += p[1]
         
+        #print aggregateWeights
         """resample on weights"""
         allPossible=[]
         for i in range(self.numParticles):
             allPossible.append([util.sample(aggregateWeights), 1])
-        
+                
         self.particles=allPossible
         
 
@@ -610,26 +633,24 @@ class JointParticleFilter:
               but in this project all ghost agents are always the same.
         """
         newParticles = []
-        for oldParticle in self.particles:
-            newParticle = list(oldParticle) # A list of ghost positions
 
+        for oldParticle in self.particles:
+            
+            newParticle = list(oldParticle[0]) # A list of ghost positions
             # now loop through and update each entry in newParticle...
 
+
+            prevGhostPositions = oldParticle[0]
             "*** YOUR CODE HERE ***"
-
-
-
-'''            
-        for particle in self.particles:
-            oldPos=particle[0]
-            newPosDist=self.getPositionDistribution(self.setGhostPosition(gameState, oldPos))
-            #update particle based on newPosDist
-            particle[0] = util.sample(newPosDist);
-'''            
+            for i in range(self.numGhosts):
+                newPosDist = getPositionDistributionForGhost(setGhostPositions(gameState, prevGhostPositions), i , self.ghostAgents[i])
+                #update particle based on newPosDist
+                newParticle[i] = util.sample(newPosDist);
+            
 
 
             "*** END YOUR CODE HERE ***"
-            newParticles.append(tuple(newParticle))
+            newParticles.append([tuple(newParticle), oldParticle[1]])
         self.particles = newParticles
 
     def getBeliefDistribution(self):
@@ -637,6 +658,7 @@ class JointParticleFilter:
         #util.raiseNotDefined()
         beliefs = util.Counter()
         for particlePositions in self.particles:
+            #print particlePositions[0]
             beliefs[particlePositions[0]] += 1
         beliefs.normalize()
         return beliefs
